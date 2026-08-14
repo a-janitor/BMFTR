@@ -1,0 +1,24 @@
+# AMIS data – never upload
+data/raw/*
+data/processed/*
+*.sav
+*.dta
+*.sas7bdat
+*.xlsx
+*.csv
+*.rds
+*.RData
+
+# Keep data folders
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# R
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+
+# Temporary files
+~$*
+*.tmp
