@@ -202,59 +202,6 @@ cat(
   "\n"
 )
 
-
-##### CHECK DUPLICATED SIC VALUES #####
-
-duplicated_sic_t2 <- cbcl_t2_raw |>
-  dplyr::filter(
-    !is.na(sic)
-  ) |>
-  dplyr::count(
-    sic,
-    name = "n"
-  ) |>
-  dplyr::filter(
-    n > 1
-  )
-
-duplicated_sic_t5 <- cbcl_t5_raw |>
-  dplyr::filter(
-    !is.na(sic)
-  ) |>
-  dplyr::count(
-    sic,
-    name = "n"
-  ) |>
-  dplyr::filter(
-    n > 1
-  )
-
-cat(
-  "Duplicated SIC values in CBCL T2:",
-  nrow(duplicated_sic_t2),
-  "\n"
-)
-
-cat(
-  "Duplicated SIC values in CBCL T5:",
-  nrow(duplicated_sic_t5),
-  "\n"
-)
-
-if (nrow(duplicated_sic_t2) > 0) {
-  print(
-    duplicated_sic_t2,
-    n = Inf
-  )
-}
-
-if (nrow(duplicated_sic_t5) > 0) {
-  print(
-    duplicated_sic_t5,
-    n = Inf
-  )
-}
-
 ##### FUNCTION: CHECK AND CLEAN CBCL ITEMS #####
 
 clean_cbcl_items <- function(
@@ -406,7 +353,175 @@ cbcl_t5_raw <- cbcl_t5_cleaning$data
 cbcl_t5_invalid_values <-
   cbcl_t5_cleaning$invalid_values
 
+##### CHECK AND REMOVE DUPLICATED SIC VALUES #####
 
+# Die Itemwerte wurden zu diesem Zeitpunkt bereits bereinigt.
+# Deshalb kann die vollständigere Zeile anhand der Anzahl
+# gültiger CBCL-Items ausgewählt werden.
+
+t2_item_variables <-
+  cbcl_t2_cleaning$item_variables
+
+t5_item_variables <-
+  cbcl_t5_cleaning$item_variables
+
+
+##### IDENTIFY DUPLICATED SIC VALUES #####
+
+duplicated_sic_t2 <- cbcl_t2_raw |>
+  dplyr::filter(
+    !is.na(sic)
+  ) |>
+  dplyr::count(
+    sic,
+    name = "n"
+  ) |>
+  dplyr::filter(
+    n > 1
+  )
+
+duplicated_sic_t5 <- cbcl_t5_raw |>
+  dplyr::filter(
+    !is.na(sic)
+  ) |>
+  dplyr::count(
+    sic,
+    name = "n"
+  ) |>
+  dplyr::filter(
+    n > 1
+  )
+
+
+##### PRINT DUPLICATE OVERVIEW #####
+
+cat(
+  "\nDuplicated SIC values in CBCL T2:",
+  nrow(duplicated_sic_t2),
+  "\n"
+)
+
+cat(
+  "Duplicated SIC values in CBCL T5:",
+  nrow(duplicated_sic_t5),
+  "\n"
+)
+
+if (nrow(duplicated_sic_t2) > 0) {
+  print(
+    duplicated_sic_t2,
+    n = Inf
+  )
+}
+
+if (nrow(duplicated_sic_t5) > 0) {
+  print(
+    duplicated_sic_t5,
+    n = Inf
+  )
+}
+
+
+##### INSPECT DUPLICATED T2 RECORDS #####
+
+if (nrow(duplicated_sic_t2) > 0) {
+  
+  cbcl_t2_duplicate_check <- cbcl_t2_raw |>
+    dplyr::filter(
+      sic %in% duplicated_sic_t2$sic
+    ) |>
+    dplyr::mutate(
+      n_valid_cbcl_items = rowSums(
+        !is.na(
+          dplyr::pick(
+            dplyr::all_of(t2_item_variables)
+          )
+        )
+      )
+    ) |>
+    dplyr::select(
+      sic,
+      dplyr::any_of(
+        c(
+          "cbcl_e_t2_datum",
+          "cbcl_e_t2_startzeit",
+          "cbcl_e_t2_endzeit",
+          "cbcl_e_t2_dqp_id",
+          "cbcl_e_t2_tech_checked",
+          "cbcl_e_t2_curated",
+          "cbcl_e_t2_checked"
+        )
+      ),
+      n_valid_cbcl_items
+    )
+  
+  print(
+    cbcl_t2_duplicate_check,
+    width = Inf
+  )
+}
+
+
+##### REMOVE DUPLICATED T2 RECORDS #####
+
+cbcl_t2_raw <- cbcl_t2_raw |>
+  dplyr::mutate(
+    n_valid_cbcl_items = rowSums(
+      !is.na(
+        dplyr::pick(
+          dplyr::all_of(t2_item_variables)
+        )
+      )
+    )
+  ) |>
+  dplyr::arrange(
+    sic,
+    dplyr::desc(n_valid_cbcl_items)
+  ) |>
+  dplyr::distinct(
+    sic,
+    .keep_all = TRUE
+  ) |>
+  dplyr::select(
+    -n_valid_cbcl_items
+  )
+
+
+##### REMOVE DUPLICATED T5 RECORDS IF NECESSARY #####
+
+cbcl_t5_raw <- cbcl_t5_raw |>
+  dplyr::mutate(
+    n_valid_cbcl_items = rowSums(
+      !is.na(
+        dplyr::pick(
+          dplyr::all_of(t5_item_variables)
+        )
+      )
+    )
+  ) |>
+  dplyr::arrange(
+    sic,
+    dplyr::desc(n_valid_cbcl_items)
+  ) |>
+  dplyr::distinct(
+    sic,
+    .keep_all = TRUE
+  ) |>
+  dplyr::select(
+    -n_valid_cbcl_items
+  )
+
+
+##### VERIFY UNIQUE SIC VALUES #####
+
+stopifnot(
+  anyDuplicated(cbcl_t2_raw$sic) == 0,
+  anyDuplicated(cbcl_t5_raw$sic) == 0
+)
+
+message(
+  "Duplicated CBCL records successfully resolved."
+)
 
 ##### FUNCTION: PRORATED SUM SCORE #####
 
@@ -938,80 +1053,181 @@ cat(
 )
 
 
-t2_item_variables <- cbcl_t2_cleaning$item_variables
+##### PREPARE CBCL SCORES FOR MERGE #####
 
-cbcl_t2_duplicate_check <- cbcl_t2_raw |>
+cbcl_t2_for_merge <- cbcl_t2_scored |>
   dplyr::filter(
-    sic %in% duplicate_sic_t2
-  ) |>
-  dplyr::mutate(
-    n_valid_cbcl_items = rowSums(
-      !is.na(
-        dplyr::pick(
-          dplyr::all_of(t2_item_variables)
-        )
-      )
-    )
+    !is.na(sic)
   ) |>
   dplyr::select(
     sic,
-    dplyr::any_of(
-      c(
-        "cbcl_e_t2_datum",
-        "cbcl_e_t2_startzeit",
-        "cbcl_e_t2_endzeit",
-        "cbcl_e_t2_dqp_id",
-        "cbcl_e_t2_tech_checked",
-        "cbcl_e_t2_curated",
-        "cbcl_e_t2_checked"
-      )
-    ),
-    n_valid_cbcl_items
+    cbcl_internal_t2,
+    cbcl_external_t2,
+    cbcl_total_t2
   )
 
-print(
-  cbcl_t2_duplicate_check,
-  width = Inf
-)
-
-
-duplicate_sic_t2 <- duplicated_sic_t2$sic
-
-cbcl_t2_duplicate_rows <- cbcl_t2_raw |>
+cbcl_t5_for_merge <- cbcl_t5_scored |>
   dplyr::filter(
-    sic %in% duplicate_sic_t2
-  )
-
-print(
-  cbcl_t2_duplicate_rows,
-  width = Inf
-)
-
-cbcl_t2_raw <- cbcl_t2_raw |>
-  dplyr::mutate(
-    n_valid_cbcl_items = rowSums(
-      !is.na(
-        dplyr::pick(
-          dplyr::all_of(t2_item_variables)
-        )
-      )
-    )
-  ) |>
-  dplyr::arrange(
-    sic,
-    dplyr::desc(n_valid_cbcl_items)
-  ) |>
-  dplyr::distinct(
-    sic,
-    .keep_all = TRUE
+    !is.na(sic)
   ) |>
   dplyr::select(
-    -n_valid_cbcl_items
+    sic,
+    cbcl_internal_t5,
+    cbcl_external_t5,
+    cbcl_total_t5
   )
+##### CHECK MERGE KEYS #####
 
-anyDuplicated(
-  cbcl_t2_raw$sic
+stopifnot(
+  "sic" %in% names(amis_ml),
+  !anyDuplicated(amis_ml$sic),
+  !anyDuplicated(cbcl_t2_for_merge$sic),
+  !anyDuplicated(cbcl_t5_for_merge$sic)
 )
 
+cat(
+  "\nUnique SICs in main data:",
+  dplyr::n_distinct(amis_ml$sic),
+  "\n"
+)
 
+cat(
+  "Unique SICs in CBCL T2:",
+  dplyr::n_distinct(cbcl_t2_for_merge$sic),
+  "\n"
+)
 
+cat(
+  "Unique SICs in CBCL T5:",
+  dplyr::n_distinct(cbcl_t5_for_merge$sic),
+  "\n"
+)
+##### CHECK MATCHING SIC VALUES #####
+
+n_matched_t2 <- amis_ml |>
+  dplyr::semi_join(
+    cbcl_t2_for_merge,
+    by = "sic"
+  ) |>
+  nrow()
+
+n_matched_t5 <- amis_ml |>
+  dplyr::semi_join(
+    cbcl_t5_for_merge,
+    by = "sic"
+  ) |>
+  nrow()
+
+cat(
+  "\nMain-data participants matched with CBCL T2:",
+  n_matched_t2,
+  "\n"
+)
+
+cat(
+  "Main-data participants matched with CBCL T5:",
+  n_matched_t5,
+  "\n"
+)
+
+##### MERGE CBCL SCORES INTO ML DATA #####
+
+n_before_merge <- nrow(
+  amis_ml
+)
+
+amis_ml <- amis_ml |>
+  dplyr::left_join(
+    cbcl_t2_for_merge,
+    by = "sic",
+    relationship = "one-to-one"
+  ) |>
+  dplyr::left_join(
+    cbcl_t5_for_merge,
+    by = "sic",
+    relationship = "one-to-one"
+  )
+
+stopifnot(
+  nrow(amis_ml) == n_before_merge
+)
+
+message(
+  "CBCL T2 and T5 scores successfully merged into amis_ml."
+)
+##### ADD CBCL PREDICTOR BLOCKS #####
+
+predictor_blocks$cbcl_internal <-
+  "cbcl_internal_t2"
+
+predictor_blocks$cbcl_external <-
+  "cbcl_external_t2"
+
+predictor_blocks$cbcl_total <-
+  "cbcl_total_t2"
+
+cbcl_scenarios_total <- list(
+  
+  C0_clinical = c(
+    model_scenarios_total$M2_maltreatment
+  ),
+  
+  C1_add_cbcl = c(
+    model_scenarios_total$M2_maltreatment,
+    predictor_blocks$cbcl_total
+  )
+)
+
+##### CHECK MERGED CBCL DATA #####
+
+cbcl_merge_overview <- amis_ml |>
+  dplyr::summarise(
+    n_cbcl_internal_t2 =
+      sum(!is.na(cbcl_internal_t2)),
+    
+    n_cbcl_external_t2 =
+      sum(!is.na(cbcl_external_t2)),
+    
+    n_cbcl_total_t2 =
+      sum(!is.na(cbcl_total_t2)),
+    
+    n_cbcl_internal_t5 =
+      sum(!is.na(cbcl_internal_t5)),
+    
+    n_cbcl_external_t5 =
+      sum(!is.na(cbcl_external_t5)),
+    
+    n_cbcl_total_t5 =
+      sum(!is.na(cbcl_total_t5))
+  )
+
+print(
+  cbcl_merge_overview
+)
+
+cbcl_scenarios_internal <- list(
+  
+  C0_clinical = c(
+    model_scenarios_internal$M2_maltreatment
+  ),
+  
+  C1_add_cbcl = c(
+    model_scenarios_internal$M2_maltreatment,
+    predictor_blocks$cbcl_internal
+  )
+)
+
+cbcl_scenarios_external <- list(
+  
+  C0_clinical = c(
+    model_scenarios_external$M2_maltreatment
+  ),
+  
+  C1_add_cbcl = c(
+    model_scenarios_external$M2_maltreatment,
+    predictor_blocks$cbcl_external
+  )
+)
+
+exists("crossvalidate_elastic_net")
+exists("run_elastic_scenarios")

@@ -268,6 +268,81 @@ elastic_net_total <- crossvalidate_elastic_net(
     model_scenarios_total$M2_maltreatment
 )
 
+##### COMBINE ELASTIC-NET PERFORMANCE #####
+
+elastic_net_performance <- dplyr::bind_rows(
+  
+  elastic_net_internal$performance_by_repetition |>
+    dplyr::mutate(
+      outcome = "sdq_internal_t5",
+      .before = 1
+    ),
+  
+  elastic_net_external$performance_by_repetition |>
+    dplyr::mutate(
+      outcome = "sdq_external_t5",
+      .before = 1
+    ),
+  
+  elastic_net_total$performance_by_repetition |>
+    dplyr::mutate(
+      outcome = "sdq_total_t5",
+      .before = 1
+    )
+)
+
+
+##### SUMMARIZE ELASTIC-NET PERFORMANCE #####
+
+elastic_net_performance_summary <-
+  elastic_net_performance |>
+  dplyr::group_by(
+    outcome
+  ) |>
+  dplyr::summarise(
+    n_repeats = dplyr::n(),
+    
+    rmse_mean = mean(
+      rmse,
+      na.rm = TRUE
+    ),
+    
+    rmse_sd = stats::sd(
+      rmse,
+      na.rm = TRUE
+    ),
+    
+    mae_mean = mean(
+      mae,
+      na.rm = TRUE
+    ),
+    
+    mae_sd = stats::sd(
+      mae,
+      na.rm = TRUE
+    ),
+    
+    r_squared_mean = mean(
+      r_squared,
+      na.rm = TRUE
+    ),
+    
+    r_squared_sd = stats::sd(
+      r_squared,
+      na.rm = TRUE
+    ),
+    
+    .groups = "drop"
+  )
+
+
+##### PRINT ELASTIC-NET PERFORMANCE #####
+
+print(
+  elastic_net_performance_summary,
+  n = Inf,
+  width = Inf
+)
 
 ##### SUMMARIZE TUNING RESULTS #####
 
@@ -297,12 +372,53 @@ elastic_net_tuning_summary <- dplyr::bind_rows(
     .groups = "drop"
   )
 
-print(
-  elastic_net_tuning_summary,
-  n = Inf
-)
 
 print(
   elastic_net_performance_summary,
   n = Inf
+)
+
+##### SAVE CLINICAL MODEL RESULTS #####
+
+clinical_model_results <- list(
+  
+  reference_performance =
+    reference_performance,
+  
+  reference_performance_summary =
+    reference_performance_summary,
+  
+  elastic_net_internal =
+    elastic_net_internal,
+  
+  elastic_net_external =
+    elastic_net_external,
+  
+  elastic_net_total =
+    elastic_net_total,
+  
+  elastic_net_performance =
+    elastic_net_performance,
+  
+  elastic_net_performance_summary =
+    elastic_net_performance_summary,
+  
+  elastic_net_tuning_summary =
+    elastic_net_tuning_summary
+)
+
+saveRDS(
+  clinical_model_results,
+  file.path(
+    path_output,
+    "clinical_models_results.rds"
+  )
+)
+
+message(
+  "Clinical model results saved to: ",
+  here::here(
+    "output",
+    "clinical_models_results.rds"
+  )
 )

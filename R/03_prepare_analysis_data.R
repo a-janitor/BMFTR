@@ -10,6 +10,10 @@ source(
 
 ##### DEFINE INDIVIDUAL VARIABLES #####
 
+# SIC
+
+var_sic<-"sic"
+
 # Soziodemografische Variablen
 var_sex <- "sdq_sex"
 var_age <- "sdq_age_parent_t2"
@@ -28,6 +32,29 @@ var_sdq_emotion_t5 <- "sdq_emotion_b_t5"
 var_sdq_peer_t5 <- "sdq_peer_b_t5"
 var_sdq_conduct_t5 <- "sdq_conduct_b_t5"
 var_sdq_hyper_t5 <- "sdq_hyper_b_t5"
+
+##### SDQ: KINDERURTEIL ZU T5 #####
+
+var_sdq_emotion_child_t5 <- "sdq_emotion_k_t5"
+var_sdq_peer_child_t5 <- "sdq_peer_k_t5"
+var_sdq_conduct_child_t5 <- "sdq_conduct_k_t5"
+var_sdq_hyper_child_t5 <- "sdq_hyper_k_t5"
+
+
+##### SDQ: PARTNER:INNENURTEIL ZU T5 #####
+
+var_sdq_emotion_partner_t5 <- "sdq_emotion_p_t5"
+var_sdq_peer_partner_t5 <- "sdq_peer_p_t5"
+var_sdq_conduct_partner_t5 <- "sdq_conduct_p_t5"
+var_sdq_hyper_partner_t5 <- "sdq_hyper_p_t5"
+
+
+##### SDQ: LEHRER:INNENURTEIL ZU T5 #####
+
+var_sdq_emotion_teacher_t5 <- "sdq_emotion_t_t5"
+var_sdq_peer_teacher_t5 <- "sdq_peer_t_t5"
+var_sdq_conduct_teacher_t5 <- "sdq_conduct_t_t5"
+var_sdq_hyper_teacher_t5 <- "sdq_hyper_t_t5"
 
 
 # Misshandlungsindikatoren aus dem frühen Messzeitraum.
@@ -55,7 +82,7 @@ var_hcc_t2 <- "cortgen_cort_t2_pg1_z"
 
 ##### CHECK WHETHER VARIABLES EXIST #####
 
-required_variables <- c(
+required_variables <- c(var_sic,
   var_sex,
   var_age,
   var_maternal_education,
@@ -72,7 +99,24 @@ required_variables <- c(
   var_mt_severity,
   var_prs_mdd,
   var_genetic_pcs,
-  var_hcc_t2
+  var_hcc_t2,
+  # Kinderurteil T5
+  var_sdq_emotion_child_t5,
+  var_sdq_peer_child_t5,
+  var_sdq_conduct_child_t5,
+  var_sdq_hyper_child_t5,
+  
+  # Partner:innenurteil T5
+  var_sdq_emotion_partner_t5,
+  var_sdq_peer_partner_t5,
+  var_sdq_conduct_partner_t5,
+  var_sdq_hyper_partner_t5,
+  
+  # Lehrer:innenurteil T5
+  var_sdq_emotion_teacher_t5,
+  var_sdq_peer_teacher_t5,
+  var_sdq_conduct_teacher_t5,
+  var_sdq_hyper_teacher_t5
 )
 
 missing_variables <- setdiff(
@@ -105,7 +149,9 @@ amis_ml <- amis_ml_raw |>
     row_id = dplyr::row_number(),
     
     sic = stringr::str_trim(
-      as.character(sic)
+      as.character(
+        .data[[var_sic]]
+      )
     ),
     
     # Demografie
@@ -124,6 +170,46 @@ amis_ml <- amis_ml_raw |>
     sdq_peer_t5 = .data[[var_sdq_peer_t5]],
     sdq_conduct_t5 = .data[[var_sdq_conduct_t5]],
     sdq_hyper_t5 = .data[[var_sdq_hyper_t5]],
+    
+    # SDQ-Kinderurteil zu T5
+    sdq_emotion_child_t5 =
+      .data[[var_sdq_emotion_child_t5]],
+    
+    sdq_peer_child_t5 =
+      .data[[var_sdq_peer_child_t5]],
+    
+    sdq_conduct_child_t5 =
+      .data[[var_sdq_conduct_child_t5]],
+    
+    sdq_hyper_child_t5 =
+      .data[[var_sdq_hyper_child_t5]],
+    
+    # SDQ-Partner:innenurteil zu T5
+    sdq_emotion_partner_t5 =
+      .data[[var_sdq_emotion_partner_t5]],
+    
+    sdq_peer_partner_t5 =
+      .data[[var_sdq_peer_partner_t5]],
+    
+    sdq_conduct_partner_t5 =
+      .data[[var_sdq_conduct_partner_t5]],
+    
+    sdq_hyper_partner_t5 =
+      .data[[var_sdq_hyper_partner_t5]],
+    
+    
+    # SDQ-Lehrer:innenurteil zu T5
+    sdq_emotion_teacher_t5 =
+      .data[[var_sdq_emotion_teacher_t5]],
+    
+    sdq_peer_teacher_t5 =
+      .data[[var_sdq_peer_teacher_t5]],
+    
+    sdq_conduct_teacher_t5 =
+      .data[[var_sdq_conduct_teacher_t5]],
+    
+    sdq_hyper_teacher_t5 =
+      .data[[var_sdq_hyper_teacher_t5]],
     
     # Misshandlung
     mt_subtypes_t1 = .data[[var_mt_subtypes]],
@@ -211,6 +297,249 @@ amis_ml <- amis_ml |>
       NA_real_
     )
   )
+
+##### CREATE T5 SCORES FOR ADDITIONAL INFORMANTS #####
+
+amis_ml <- amis_ml |>
+  dplyr::mutate(
+    
+    ##### CHILD REPORT #####
+    
+    sdq_internal_child_t5 = dplyr::if_else(
+      !is.na(sdq_emotion_child_t5) &
+        !is.na(sdq_peer_child_t5),
+      sdq_emotion_child_t5 +
+        sdq_peer_child_t5,
+      NA_real_
+    ),
+    
+    sdq_external_child_t5 = dplyr::if_else(
+      !is.na(sdq_conduct_child_t5) &
+        !is.na(sdq_hyper_child_t5),
+      sdq_conduct_child_t5 +
+        sdq_hyper_child_t5,
+      NA_real_
+    ),
+    
+    sdq_total_child_t5 = dplyr::if_else(
+      !is.na(sdq_emotion_child_t5) &
+        !is.na(sdq_peer_child_t5) &
+        !is.na(sdq_conduct_child_t5) &
+        !is.na(sdq_hyper_child_t5),
+      sdq_emotion_child_t5 +
+        sdq_peer_child_t5 +
+        sdq_conduct_child_t5 +
+        sdq_hyper_child_t5,
+      NA_real_
+    ),
+    
+    
+    ##### PARTNER REPORT #####
+    
+    sdq_internal_partner_t5 = dplyr::if_else(
+      !is.na(sdq_emotion_partner_t5) &
+        !is.na(sdq_peer_partner_t5),
+      sdq_emotion_partner_t5 +
+        sdq_peer_partner_t5,
+      NA_real_
+    ),
+    
+    sdq_external_partner_t5 = dplyr::if_else(
+      !is.na(sdq_conduct_partner_t5) &
+        !is.na(sdq_hyper_partner_t5),
+      sdq_conduct_partner_t5 +
+        sdq_hyper_partner_t5,
+      NA_real_
+    ),
+    
+    sdq_total_partner_t5 = dplyr::if_else(
+      !is.na(sdq_emotion_partner_t5) &
+        !is.na(sdq_peer_partner_t5) &
+        !is.na(sdq_conduct_partner_t5) &
+        !is.na(sdq_hyper_partner_t5),
+      sdq_emotion_partner_t5 +
+        sdq_peer_partner_t5 +
+        sdq_conduct_partner_t5 +
+        sdq_hyper_partner_t5,
+      NA_real_
+    ),
+    
+    
+    ##### TEACHER REPORT #####
+    
+    sdq_internal_teacher_t5 = dplyr::if_else(
+      !is.na(sdq_emotion_teacher_t5) &
+        !is.na(sdq_peer_teacher_t5),
+      sdq_emotion_teacher_t5 +
+        sdq_peer_teacher_t5,
+      NA_real_
+    ),
+    
+    sdq_external_teacher_t5 = dplyr::if_else(
+      !is.na(sdq_conduct_teacher_t5) &
+        !is.na(sdq_hyper_teacher_t5),
+      sdq_conduct_teacher_t5 +
+        sdq_hyper_teacher_t5,
+      NA_real_
+    ),
+    
+    sdq_total_teacher_t5 = dplyr::if_else(
+      !is.na(sdq_emotion_teacher_t5) &
+        !is.na(sdq_peer_teacher_t5) &
+        !is.na(sdq_conduct_teacher_t5) &
+        !is.na(sdq_hyper_teacher_t5),
+      sdq_emotion_teacher_t5 +
+        sdq_peer_teacher_t5 +
+        sdq_conduct_teacher_t5 +
+        sdq_hyper_teacher_t5,
+      NA_real_
+    )
+  )
+
+##### STANDARDIZE INFORMANT-SPECIFIC T5 SCORES #####
+
+amis_ml <- amis_ml |>
+  dplyr::mutate(
+    
+    # Internalisierende Probleme
+    sdq_internal_parent_t5_z =
+      as.numeric(scale(sdq_internal_t5)),
+    
+    sdq_internal_child_t5_z =
+      as.numeric(scale(sdq_internal_child_t5)),
+    
+    sdq_internal_partner_t5_z =
+      as.numeric(scale(sdq_internal_partner_t5)),
+    
+    sdq_internal_teacher_t5_z =
+      as.numeric(scale(sdq_internal_teacher_t5)),
+    
+    
+    # Externalisierende Probleme
+    sdq_external_parent_t5_z =
+      as.numeric(scale(sdq_external_t5)),
+    
+    sdq_external_child_t5_z =
+      as.numeric(scale(sdq_external_child_t5)),
+    
+    sdq_external_partner_t5_z =
+      as.numeric(scale(sdq_external_partner_t5)),
+    
+    sdq_external_teacher_t5_z =
+      as.numeric(scale(sdq_external_teacher_t5)),
+    
+    
+    # Gesamtprobleme
+    sdq_total_parent_t5_z =
+      as.numeric(scale(sdq_total_t5)),
+    
+    sdq_total_child_t5_z =
+      as.numeric(scale(sdq_total_child_t5)),
+    
+    sdq_total_partner_t5_z =
+      as.numeric(scale(sdq_total_partner_t5)),
+    
+    sdq_total_teacher_t5_z =
+      as.numeric(scale(sdq_total_teacher_t5))
+  )
+
+##### CREATE MULTI-INFORMANT T5 OUTCOMES #####
+
+amis_ml <- amis_ml |>
+  dplyr::mutate(
+    
+    ##### NUMBER OF AVAILABLE INFORMANTS #####
+    
+    n_internal_informants_t5 = rowSums(
+      !is.na(
+        dplyr::pick(
+          sdq_internal_parent_t5_z,
+          sdq_internal_child_t5_z,
+          sdq_internal_partner_t5_z,
+          sdq_internal_teacher_t5_z
+        )
+      )
+    ),
+    
+    n_external_informants_t5 = rowSums(
+      !is.na(
+        dplyr::pick(
+          sdq_external_parent_t5_z,
+          sdq_external_child_t5_z,
+          sdq_external_partner_t5_z,
+          sdq_external_teacher_t5_z
+        )
+      )
+    ),
+    
+    n_total_informants_t5 = rowSums(
+      !is.na(
+        dplyr::pick(
+          sdq_total_parent_t5_z,
+          sdq_total_child_t5_z,
+          sdq_total_partner_t5_z,
+          sdq_total_teacher_t5_z
+        )
+      )
+    ),
+    
+    
+    ##### MEAN ACROSS AVAILABLE INFORMANTS #####
+    
+    sdq_internal_multi_t5 = rowMeans(
+      dplyr::pick(
+        sdq_internal_parent_t5_z,
+        sdq_internal_child_t5_z,
+        sdq_internal_partner_t5_z,
+        sdq_internal_teacher_t5_z
+      ),
+      na.rm = TRUE
+    ),
+    
+    sdq_external_multi_t5 = rowMeans(
+      dplyr::pick(
+        sdq_external_parent_t5_z,
+        sdq_external_child_t5_z,
+        sdq_external_partner_t5_z,
+        sdq_external_teacher_t5_z
+      ),
+      na.rm = TRUE
+    ),
+    
+    sdq_total_multi_t5 = rowMeans(
+      dplyr::pick(
+        sdq_total_parent_t5_z,
+        sdq_total_child_t5_z,
+        sdq_total_partner_t5_z,
+        sdq_total_teacher_t5_z
+      ),
+      na.rm = TRUE
+    ),
+    
+    
+    ##### REQUIRE AT LEAST TWO INFORMANTS #####
+    
+    sdq_internal_multi_t5 = dplyr::if_else(
+      n_internal_informants_t5 >= 2,
+      sdq_internal_multi_t5,
+      NA_real_
+    ),
+    
+    sdq_external_multi_t5 = dplyr::if_else(
+      n_external_informants_t5 >= 2,
+      sdq_external_multi_t5,
+      NA_real_
+    ),
+    
+    sdq_total_multi_t5 = dplyr::if_else(
+      n_total_informants_t5 >= 2,
+      sdq_total_multi_t5,
+      NA_real_
+    )
+  )
+
+
+####### DEFINE PREDICTOR BLOCKS #########
 
 predictor_blocks <- list(
   
