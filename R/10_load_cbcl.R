@@ -937,3 +937,81 @@ cat(
   "\n"
 )
 
+
+t2_item_variables <- cbcl_t2_cleaning$item_variables
+
+cbcl_t2_duplicate_check <- cbcl_t2_raw |>
+  dplyr::filter(
+    sic %in% duplicate_sic_t2
+  ) |>
+  dplyr::mutate(
+    n_valid_cbcl_items = rowSums(
+      !is.na(
+        dplyr::pick(
+          dplyr::all_of(t2_item_variables)
+        )
+      )
+    )
+  ) |>
+  dplyr::select(
+    sic,
+    dplyr::any_of(
+      c(
+        "cbcl_e_t2_datum",
+        "cbcl_e_t2_startzeit",
+        "cbcl_e_t2_endzeit",
+        "cbcl_e_t2_dqp_id",
+        "cbcl_e_t2_tech_checked",
+        "cbcl_e_t2_curated",
+        "cbcl_e_t2_checked"
+      )
+    ),
+    n_valid_cbcl_items
+  )
+
+print(
+  cbcl_t2_duplicate_check,
+  width = Inf
+)
+
+
+duplicate_sic_t2 <- duplicated_sic_t2$sic
+
+cbcl_t2_duplicate_rows <- cbcl_t2_raw |>
+  dplyr::filter(
+    sic %in% duplicate_sic_t2
+  )
+
+print(
+  cbcl_t2_duplicate_rows,
+  width = Inf
+)
+
+cbcl_t2_raw <- cbcl_t2_raw |>
+  dplyr::mutate(
+    n_valid_cbcl_items = rowSums(
+      !is.na(
+        dplyr::pick(
+          dplyr::all_of(t2_item_variables)
+        )
+      )
+    )
+  ) |>
+  dplyr::arrange(
+    sic,
+    dplyr::desc(n_valid_cbcl_items)
+  ) |>
+  dplyr::distinct(
+    sic,
+    .keep_all = TRUE
+  ) |>
+  dplyr::select(
+    -n_valid_cbcl_items
+  )
+
+anyDuplicated(
+  cbcl_t2_raw$sic
+)
+
+
+

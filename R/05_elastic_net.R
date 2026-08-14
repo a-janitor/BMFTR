@@ -269,51 +269,10 @@ elastic_net_total <- crossvalidate_elastic_net(
 )
 
 
-##### SUMMARIZE ELASTIC-NET PERFORMANCE #####
+##### SUMMARIZE TUNING RESULTS #####
 
-elastic_net_performance <- dplyr::bind_rows(
+elastic_net_tuning_summary <- dplyr::bind_rows(
   
-  elastic_net_internal$performance_by_repetition |>
-    dplyr::mutate(
-      outcome = "sdq_internal_t5"
-    ),
-  
-  elastic_net_external$performance_by_repetition |>
-    dplyr::mutate(
-      outcome = "sdq_external_t5"
-    ),
-  
-  elastic_net_total$performance_by_repetition |>
-    dplyr::mutate(
-      outcome = "sdq_total_t5"
-    )
-)
-
-
-elastic_net_performance_summary <-
-  elastic_net_performance |>
-  dplyr::group_by(outcome) |>
-  dplyr::summarise(
-    n_repeats = dplyr::n(),
-    
-    rmse_mean = mean(rmse),
-    rmse_sd = stats::sd(rmse),
-    
-    mae_mean = mean(mae),
-    mae_sd = stats::sd(mae),
-    
-    r_squared_mean = mean(r_squared),
-    r_squared_sd = stats::sd(r_squared),
-    
-    .groups = "drop"
-  )
-
-print(
-  elastic_net_performance_summary,
-  n = Inf
-)
-
-dplyr::bind_rows(
   elastic_net_internal$tuning_results |>
     dplyr::mutate(
       outcome = "internal"
@@ -322,6 +281,11 @@ dplyr::bind_rows(
   elastic_net_external$tuning_results |>
     dplyr::mutate(
       outcome = "external"
+    ),
+  
+  elastic_net_total$tuning_results |>
+    dplyr::mutate(
+      outcome = "total"
     )
 ) |>
   dplyr::group_by(
@@ -333,17 +297,12 @@ dplyr::bind_rows(
     .groups = "drop"
   )
 
+print(
+  elastic_net_tuning_summary,
+  n = Inf
+)
 
-amis_ml |>
-  dplyr::summarise(
-    n_prs = sum(!is.na(prs_mdd)),
-    n_complete_genetics = sum(
-      !is.na(prs_mdd) &
-        !is.na(genetic_pc1) &
-        !is.na(genetic_pc2) &
-        !is.na(genetic_pc3) &
-        !is.na(genetic_pc4)
-    )
-  )
-
-
+print(
+  elastic_net_performance_summary,
+  n = Inf
+)

@@ -300,14 +300,21 @@ performance_external <- run_model_scenarios(
   scenarios = model_scenarios_external
 )
 
+##### RUN TOTAL-DIFFICULTIES MODELS #####
+
+performance_total <- run_model_scenarios(
+  data = amis_ml,
+  outcome = "sdq_total_t5",
+  scenarios = model_scenarios_total
+)
 
 ##### COMBINE RESULTS #####
 
 reference_performance <- dplyr::bind_rows(
   performance_internal,
-  performance_external
+  performance_external,
+  performance_total
 )
-
 
 ##### SUMMARIZE RESULTS #####
 
@@ -347,5 +354,44 @@ print(
 requireNamespace(
   "glmnet",
   quietly = TRUE
+)
+
+saveRDS(
+  list(
+    reference_performance =
+      reference_performance,
+    
+    reference_performance_summary =
+      reference_performance_summary,
+    
+    elastic_net_internal =
+      elastic_net_internal,
+    
+    elastic_net_external =
+      elastic_net_external,
+    
+    elastic_net_total =
+      elastic_net_total,
+    
+    elastic_net_performance =
+      elastic_net_performance,
+    
+    elastic_net_performance_summary =
+      elastic_net_performance_summary,
+    
+    elastic_net_tuning_summary =
+      elastic_net_tuning_summary
+  ),
+  here::here(
+    "output",
+    "clinical_models_results.rds"
+  )
+)
+
+file.exists(
+  here::here(
+    "output",
+    "clinical_models_results.rds"
+  )
 )
 
