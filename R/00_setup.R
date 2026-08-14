@@ -10,30 +10,35 @@ options(
 )
 
 
-##### REQUIRED PACKAGES #####
-
 required_packages <- c(
-  "tidyverse",
-  "tidymodels",
-  "workflowsets",
-  "here",
-  "janitor",
+  "dplyr",
+  "purrr",
+  "stringr",
+  "tibble",
   "readxl",
-  "haven",
-  "skimr",
-  "glmnet",
-  "ranger",
-  "xgboost",
-  "vip"
+  "janitor",
+  "here"
 )
 
+
+##### INSTALL MISSING PACKAGES #####
+
 missing_packages <- required_packages[
-  !required_packages %in% rownames(installed.packages())
+  !required_packages %in%
+    rownames(installed.packages())
 ]
 
 if (length(missing_packages) > 0) {
-  install.packages(missing_packages)
+  
+  install.packages(
+    missing_packages,
+    dependencies = TRUE
+  )
+  
 }
+
+
+##### LOAD PACKAGES #####
 
 invisible(
   lapply(
