@@ -1051,3 +1051,183 @@ cat(
   sum(cbcl_t5_invalid_values$n),
   "\n"
 )
+
+
+##### PREPARE CBCL SCORES FOR MERGE #####
+
+cbcl_t2_for_merge <- cbcl_t2_scored |>
+  dplyr::filter(
+    !is.na(sic)
+  ) |>
+  dplyr::select(
+    sic,
+    cbcl_internal_t2,
+    cbcl_external_t2,
+    cbcl_total_t2
+  )
+
+cbcl_t5_for_merge <- cbcl_t5_scored |>
+  dplyr::filter(
+    !is.na(sic)
+  ) |>
+  dplyr::select(
+    sic,
+    cbcl_internal_t5,
+    cbcl_external_t5,
+    cbcl_total_t5
+  )
+##### CHECK MERGE KEYS #####
+
+stopifnot(
+  "sic" %in% names(amis_ml),
+  !anyDuplicated(amis_ml$sic),
+  !anyDuplicated(cbcl_t2_for_merge$sic),
+  !anyDuplicated(cbcl_t5_for_merge$sic)
+)
+
+cat(
+  "\nUnique SICs in main data:",
+  dplyr::n_distinct(amis_ml$sic),
+  "\n"
+)
+
+cat(
+  "Unique SICs in CBCL T2:",
+  dplyr::n_distinct(cbcl_t2_for_merge$sic),
+  "\n"
+)
+
+cat(
+  "Unique SICs in CBCL T5:",
+  dplyr::n_distinct(cbcl_t5_for_merge$sic),
+  "\n"
+)
+##### CHECK MATCHING SIC VALUES #####
+
+n_matched_t2 <- amis_ml |>
+  dplyr::semi_join(
+    cbcl_t2_for_merge,
+    by = "sic"
+  ) |>
+  nrow()
+
+n_matched_t5 <- amis_ml |>
+  dplyr::semi_join(
+    cbcl_t5_for_merge,
+    by = "sic"
+  ) |>
+  nrow()
+
+cat(
+  "\nMain-data participants matched with CBCL T2:",
+  n_matched_t2,
+  "\n"
+)
+
+cat(
+  "Main-data participants matched with CBCL T5:",
+  n_matched_t5,
+  "\n"
+)
+
+##### MERGE CBCL SCORES INTO ML DATA #####
+
+n_before_merge <- nrow(
+  amis_ml
+)
+
+amis_ml <- amis_ml |>
+  dplyr::left_join(
+    cbcl_t2_for_merge,
+    by = "sic",
+    relationship = "one-to-one"
+  ) |>
+  dplyr::left_join(
+    cbcl_t5_for_merge,
+    by = "sic",
+    relationship = "one-to-one"
+  )
+
+stopifnot(
+  nrow(amis_ml) == n_before_merge
+)
+
+message(
+  "CBCL T2 and T5 scores successfully merged into amis_ml."
+)
+##### ADD CBCL PREDICTOR BLOCKS #####
+
+predictor_blocks$cbcl_internal <-
+  "cbcl_internal_t2"
+
+predictor_blocks$cbcl_external <-
+  "cbcl_external_t2"
+
+predictor_blocks$cbcl_total <-
+  "cbcl_total_t2"
+
+cbcl_scenarios_total <- list(
+  
+  C0_clinical = c(
+    model_scenarios_total$M2_maltreatment
+  ),
+  
+  C1_add_cbcl = c(
+    model_scenarios_total$M2_maltreatment,
+    predictor_blocks$cbcl_total
+  )
+)
+
+##### CHECK MERGED CBCL DATA #####
+
+cbcl_merge_overview <- amis_ml |>
+  dplyr::summarise(
+    n_cbcl_internal_t2 =
+      sum(!is.na(cbcl_internal_t2)),
+    
+    n_cbcl_external_t2 =
+      sum(!is.na(cbcl_external_t2)),
+    
+    n_cbcl_total_t2 =
+      sum(!is.na(cbcl_total_t2)),
+    
+    n_cbcl_internal_t5 =
+      sum(!is.na(cbcl_internal_t5)),
+    
+    n_cbcl_external_t5 =
+      sum(!is.na(cbcl_external_t5)),
+    
+    n_cbcl_total_t5 =
+      sum(!is.na(cbcl_total_t5))
+  )
+
+print(
+  cbcl_merge_overview
+)
+
+cbcl_scenarios_internal <- list(
+  
+  C0_clinical = c(
+    model_scenarios_internal$M2_maltreatment
+  ),
+  
+  C1_add_cbcl = c(
+    model_scenarios_internal$M2_maltreatment,
+    predictor_blocks$cbcl_internal
+  )
+)
+
+cbcl_scenarios_external <- list(
+  
+  C0_clinical = c(
+    model_scenarios_external$M2_maltreatment
+  ),
+  
+  C1_add_cbcl = c(
+    model_scenarios_external$M2_maltreatment,
+    predictor_blocks$cbcl_external
+  )
+)
+
+exists("crossvalidate_elastic_net")
+exists("run_elastic_scenarios")

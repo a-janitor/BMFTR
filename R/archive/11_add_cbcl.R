@@ -30,91 +30,6 @@ source(
   )
 )
 
-##### LOAD GERMAN CBCL/4-18 NORMS #####
-
-cbcl_norms <- utils::read.csv(
-  here::here(
-    "R",
-    "cbcl_4_18_german_norms.csv"
-  ),
-  stringsAsFactors = FALSE
-)
-
-stopifnot(
-  all(
-    c(
-      "age_group",
-      "sex",
-      "scale",
-      "raw_threshold",
-      "t_score"
-    ) %in% names(cbcl_norms)
-  )
-)
-
-
-##### FUNCTION: CONVERT RAW SCORES TO T SCORES #####
-
-raw_to_cbcl_t <- function(
-    raw_score,
-    scale,
-    age_group,
-    sex,
-    norms = cbcl_norms
-) {
-  vapply(
-    seq_along(raw_score),
-    function(i) {
-      if (
-        is.na(raw_score[[i]]) ||
-          is.na(age_group[[i]]) ||
-          is.na(sex[[i]]) ||
-          !sex[[i]] %in% c(1, 2)
-      ) {
-        return(NA_real_)
-      }
-
-      eligible <- norms[
-        norms$scale == scale &
-          norms$age_group == age_group[[i]] &
-          norms$sex == sex[[i]] &
-          norms$raw_threshold <= raw_score[[i]],
-        ,
-        drop = FALSE
-      ]
-
-      if (nrow(eligible) == 0) {
-        return(NA_real_)
-      }
-
-      eligible$t_score[[
-        which.max(eligible$raw_threshold)
-      ]]
-    },
-    numeric(1)
-  )
-}
-
-
-##### FUNCTION: CLASSIFY BROADBAND T SCORES #####
-
-classify_cbcl_t <- function(t_score) {
-  factor(
-    dplyr::case_when(
-      is.na(t_score) ~ NA_character_,
-      t_score < 60 ~ "unauffaellig",
-      t_score < 64 ~ "grenzwertig",
-      TRUE ~ "auffaellig"
-    ),
-    levels = c(
-      "unauffaellig",
-      "grenzwertig",
-      "auffaellig"
-    ),
-    ordered = TRUE
-  )
-}
-
 ##### MERGE CBCL SCORES WITH MAIN ANALYSIS DATA #####
 
 # Sicherheitsprüfung: Pro SIC darf nur eine Zeile vorliegen.
@@ -175,115 +90,6 @@ amis_ml_cbcl <- amis_ml |>
         cbcl_total_t5
       ),
     by = "sic"
-  ) |>
-  dplyr::mutate(
-    cbcl_norm_age_group_t2 = dplyr::case_when(
-      is.na(age_t2) ~ NA_character_,
-      age_t2 < 12 ~ "4_11",
-      TRUE ~ "12_18"
-    ),
-
-    # All T5 participants are assigned to the oldest CBCL/4-18
-    # norm group. This includes participants older than 18 years
-    # to preserve longitudinal comparability.
-    cbcl_norm_age_group_t5 = "12_18",
-
-    cbcl_internal_t2_t = raw_to_cbcl_t(
-      cbcl_internal_t2,
-      scale = "internal",
-      age_group = cbcl_norm_age_group_t2,
-      sex = sex
-    ),
-    cbcl_external_t2_t = raw_to_cbcl_t(
-      cbcl_external_t2,
-      scale = "external",
-      age_group = cbcl_norm_age_group_t2,
-      sex = sex
-    ),
-    cbcl_total_t2_t = raw_to_cbcl_t(
-      cbcl_total_t2,
-      scale = "total",
-      age_group = cbcl_norm_age_group_t2,
-      sex = sex
-    ),
-
-    cbcl_internal_t5_t = raw_to_cbcl_t(
-      cbcl_internal_t5,
-      scale = "internal",
-      age_group = cbcl_norm_age_group_t5,
-      sex = sex
-    ),
-    cbcl_external_t5_t = raw_to_cbcl_t(
-      cbcl_external_t5,
-      scale = "external",
-      age_group = cbcl_norm_age_group_t5,
-      sex = sex
-    ),
-    cbcl_total_t5_t = raw_to_cbcl_t(
-      cbcl_total_t5,
-      scale = "total",
-      age_group = cbcl_norm_age_group_t5,
-      sex = sex
-    ),
-
-    cbcl_internal_t2_category = classify_cbcl_t(
-      cbcl_internal_t2_t
-    ),
-    cbcl_external_t2_category = classify_cbcl_t(
-      cbcl_external_t2_t
-    ),
-    cbcl_total_t2_category = classify_cbcl_t(
-      cbcl_total_t2_t
-    ),
-    cbcl_internal_t5_category = classify_cbcl_t(
-      cbcl_internal_t5_t
-    ),
-    cbcl_external_t5_category = classify_cbcl_t(
-      cbcl_external_t5_t
-    ),
-    cbcl_total_t5_category = classify_cbcl_t(
-      cbcl_total_t5_t
-    ),
-
-    cbcl_internal_t2_borderline_or_clinical = as.integer(
-      cbcl_internal_t2_t >= 60
-    ),
-    cbcl_external_t2_borderline_or_clinical = as.integer(
-      cbcl_external_t2_t >= 60
-    ),
-    cbcl_total_t2_borderline_or_clinical = as.integer(
-      cbcl_total_t2_t >= 60
-    ),
-
-    cbcl_internal_t2_clinical = as.integer(
-      cbcl_internal_t2_t >= 64
-    ),
-    cbcl_external_t2_clinical = as.integer(
-      cbcl_external_t2_t >= 64
-    ),
-    cbcl_total_t2_clinical = as.integer(
-      cbcl_total_t2_t >= 64
-    ),
-
-    cbcl_internal_t5_borderline_or_clinical = as.integer(
-      cbcl_internal_t5_t >= 60
-    ),
-    cbcl_external_t5_borderline_or_clinical = as.integer(
-      cbcl_external_t5_t >= 60
-    ),
-    cbcl_total_t5_borderline_or_clinical = as.integer(
-      cbcl_total_t5_t >= 60
-    ),
-
-    cbcl_internal_t5_clinical = as.integer(
-      cbcl_internal_t5_t >= 64
-    ),
-    cbcl_external_t5_clinical = as.integer(
-      cbcl_external_t5_t >= 64
-    ),
-    cbcl_total_t5_clinical = as.integer(
-      cbcl_total_t5_t >= 64
-    )
   )
 
 
@@ -307,43 +113,7 @@ stopifnot(
 )
 
 message(
-  "CBCL raw scores, T scores, and clinical categories successfully created."
-)
-
-
-##### ADD CBCL PREDICTOR BLOCKS #####
-
-predictor_blocks$cbcl_internal <-
-  "cbcl_internal_t2"
-
-predictor_blocks$cbcl_external <-
-  "cbcl_external_t2"
-
-predictor_blocks$cbcl_total <-
-  "cbcl_total_t2"
-
-cbcl_scenarios_internal <- list(
-  C0_clinical = model_scenarios_internal$M2_maltreatment,
-  C1_add_cbcl = c(
-    model_scenarios_internal$M2_maltreatment,
-    predictor_blocks$cbcl_internal
-  )
-)
-
-cbcl_scenarios_external <- list(
-  C0_clinical = model_scenarios_external$M2_maltreatment,
-  C1_add_cbcl = c(
-    model_scenarios_external$M2_maltreatment,
-    predictor_blocks$cbcl_external
-  )
-)
-
-cbcl_scenarios_total <- list(
-  C0_clinical = model_scenarios_total$M2_maltreatment,
-  C1_add_cbcl = c(
-    model_scenarios_total$M2_maltreatment,
-    predictor_blocks$cbcl_total
-  )
+  "CBCL scores successfully merged with the main analysis data."
 )
 
 
@@ -380,17 +150,17 @@ if (length(missing_objects) > 0) {
 
 ##### CREATE CBCL SUBSAMPLES #####
 
-amis_ml_cbcl_internal <- amis_ml_cbcl |>
+amis_ml_cbcl_internal <- amis_ml |>
   dplyr::filter(
     !is.na(cbcl_internal_t2)
   )
 
-amis_ml_cbcl_external <- amis_ml_cbcl |>
+amis_ml_cbcl_external <- amis_ml |>
   dplyr::filter(
     !is.na(cbcl_external_t2)
   )
 
-amis_ml_cbcl_total <- amis_ml_cbcl |>
+amis_ml_cbcl_total <- amis_ml |>
   dplyr::filter(
     !is.na(cbcl_total_t2)
   )
